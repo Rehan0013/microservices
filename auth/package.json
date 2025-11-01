@@ -1,0 +1,31 @@
+{
+  "name": "auth",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --runInBand",
+    "test:coverage": "jest --coverage --runInBand",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-validator": "^7.3.0",
+    "ioredis": "^5.8.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.2"
+  },
+  "devDependencies": {
+    "jest": "^29.6.1",
+    "mongodb-memory-server": "^8.15.1",
+    "nodemon": "^3.1.10",
+    "supertest": "^6.3.3"
+  }
+}
