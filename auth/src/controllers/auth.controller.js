@@ -10,7 +10,7 @@ const registerUserController = async (req, res) => {
     email,
     password,
     fullName: { firstName, lastName },
-    role
+    role,
   } = req.body;
 
   const isUserExisted = await userModel.findOne({
@@ -238,6 +238,50 @@ const deleteUserAddressController = async (req, res) => {
   });
 };
 
+const updateUserAddressController = async (req, res) => {
+  const id = req.user._id;
+  const { addressId } = req.params;
+
+  const { street, city, state, pincode, country, isDefault } = req.body;
+
+  const isaddressExist = await userModel.findOne({
+    _id: userId,
+    "addressess._id": addressId,
+  });
+
+  if (!isaddressExist) {
+    return res.status(404).json({
+      message: "Address not found",
+    });
+  }
+
+  const user = await userModel.findOneAndUpdate(
+    { _id: id, "addressess._id": addressId },
+    {
+      $set: {
+        "addressess.$.street": street,
+        "addressess.$.city": city,
+        "addressess.$.state": state,
+        "addressess.$.pincode": pincode,
+        "addressess.$.country": country,
+        "addressess.$.isDefault": isDefault,
+      },
+    },
+    { new: true }
+  );
+
+  if (!user) {
+    return res.status(404).json({
+      message: "User not found",
+    });
+  }
+
+  res.status(200).json({
+    message: "User Address Updated Successfully",
+    addresses: user.addressess,
+  });
+};
+
 module.exports = {
   registerUserController,
   loginUserController,
@@ -246,4 +290,5 @@ module.exports = {
   getUserAdressesController,
   addUserAddressController,
   deleteUserAddressController,
+  updateUserAddressController,
 };

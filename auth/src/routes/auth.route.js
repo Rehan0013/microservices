@@ -46,4 +46,11 @@ router.delete(
   authController.deleteUserAddressController
 )
 
+router.patch(
+  "/users/me/addresses/:addressId",
+  validators.userAddressValidation,
+  authMiddleware.authMiddleware,
+  authController.updateUserAddressController
+)
+
 module.exports = router;
