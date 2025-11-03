@@ -3,10 +3,10 @@ const app = require("./src/app");
 
 const connectDB = require("./src/db/db");
 
-const PORT = process.env.PORT || 4005;
+const PORT = process.env.PORT || 4006;
 
 app.listen(PORT, () => {
-  console.log(`Order service listening on port ${PORT}`);
+  console.log(`Payment service listening on port ${PORT}`);
 });
 
 connectDB();
