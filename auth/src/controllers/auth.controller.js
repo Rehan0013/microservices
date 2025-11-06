@@ -4,6 +4,8 @@ const jwt = require("jsonwebtoken");
 
 const redis = require("../db/redis");
 
+const { publishToQueue } = require("../broker/borker");
+
 const registerUserController = async (req, res) => {
   const {
     username,
@@ -35,6 +37,16 @@ const registerUserController = async (req, res) => {
       },
       role: role || "user",
     });
+
+    await Promise.all([
+      publishToQueue("AUTH_NOTIFICATION.USER_CREATED", {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        fullName: user.fullName,
+      }),
+      publishToQueue("AUTH_SELLER_DASHBOARD.USER_CREATED", user),
+    ]);
 
     const token = jwt.sign(
       {

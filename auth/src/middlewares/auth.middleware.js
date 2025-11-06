@@ -1,6 +1,6 @@
 const userModel = require("../models/user.model");
 const jwt = require("jsonwebtoken");
-const redis = require("../db/redis"); // adjust path to your redis file
+const redis = require("../db/redis");
 
 const authMiddleware = async (req, res, next) => {
   const token = req.cookies.token;
