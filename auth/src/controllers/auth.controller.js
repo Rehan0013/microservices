@@ -4,54 +4,60 @@ const jwt = require("jsonwebtoken");
 
 const redis = require("../db/redis");
 
-const { publishToQueue } = require("../broker/borker");
+const admin = require("../config/firebase");
+
+const { publishToQueue } = require("../broker/broker");
 
 const registerUserController = async (req, res) => {
-  const {
-    username,
-    email,
-    password,
-    fullName: { firstName, lastName },
-    role,
-  } = req.body;
+  const { firebaseId } = req.body;
 
-  const isUserExisted = await userModel.findOne({
-    $or: [{ username }, { email }],
-  });
-
-  if (isUserExisted) {
+  if (!firebaseId) {
     return res.status(400).json({
-      message: "Username or Email already exists",
+      success: false,
+      message: "Firebase ID token is required",
     });
   }
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Verify Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(firebaseId);
+    const firebaseUid = decodedToken.uid;
+
+    // Get user info from decoded token
+    const email = decodedToken.email;
+    const fullName = decodedToken.name;
+    const profileImage = decodedToken.picture;
+
+    if (!email || !fullName) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Firebase token data",
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await userModel.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists",
+      });
+    }
+
+    // Create new user
     const user = await userModel.create({
-      username,
       email,
-      password: hashedPassword,
-      fullName: {
-        firstName,
-        lastName,
-      },
-      role: role || "user",
+      fullName,
+      profileImage,
+      firebaseId: firebaseUid,
+      role: req.body.role || "student",
     });
 
-    await Promise.all([
-      publishToQueue("AUTH_NOTIFICATION.USER_CREATED", {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        fullName: user.fullName,
-      }),
-      publishToQueue("AUTH_SELLER_DASHBOARD.USER_CREATED", user),
-    ]);
-
+    // Create backend JWT
     const token = jwt.sign(
       {
         id: user._id,
-        username: user.username,
+        fullName: user.fullName,
         email: user.email,
         role: user.role,
       },
@@ -59,54 +65,67 @@ const registerUserController = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    // Send cookie and response
     res.cookie("token", token, {
       httpOnly: true,
-      secure: true,
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.status(201).json({
-      message: "User Register Successfully",
-      user: user,
-      token: token,
+      success: true,
+      message: "User registered successfully",
+      data: user,
+      token,
     });
   } catch (error) {
-    console.log(error);
-
+    console.error(error);
     res.status(500).json({
-      message: "Something went wrong",
+      success: false,
+      message: "User registration failed",
+      error: error.message,
     });
   }
 };
 
 const loginUserController = async (req, res) => {
-  const { username, email, password } = req.body;
+  const { firebaseId } = req.body;
+
+  if (!firebaseId) {
+    return res.status(400).json({
+      success: false,
+      message: "Firebase ID token is required",
+    });
+  }
 
   try {
-    const user = await userModel
-      .findOne({
-        $or: [{ username }, { email }],
-      })
-      .select("+password");
+    // Verify Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(firebaseId);
+    const firebaseUid = decodedToken.uid;
+    const email = decodedToken.email;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Firebase token",
+      });
+    }
+
+    // Find existing user
+    const user = await userModel.findOne({ email });
 
     if (!user) {
-      return res.status(400).json({
-        message: "Invalid Credentials",
+      return res.status(404).json({
+        success: false,
+        message: "User not found. Please register first.",
       });
     }
 
-    const isPasswordMatched = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordMatched) {
-      return res.status(400).json({
-        message: "Invalid Credentials",
-      });
-    }
-
-    const token = jwt.sign(
+    // Create backend JWT
+     const token = jwt.sign(
       {
         id: user._id,
-        username: user.username,
+        fullName: user.fullName,
         email: user.email,
         role: user.role,
       },
@@ -114,28 +133,26 @@ const loginUserController = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    // Send cookie + response
     res.cookie("token", token, {
       httpOnly: true,
-      secure: true,
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.status(200).json({
-      message: "User Logged In Successfully",
-      user: {
-        id: user._id,
-        email: user.email,
-        username: user.username,
-        fullName: user.fullName,
-        role: user.role,
-      },
-      token: token,
+      success: true,
+      message: "Login successful",
+      data: user,
+      token,
     });
   } catch (error) {
-    console.log(error);
-
+    console.error(error);
     res.status(500).json({
-      message: "Something went wrong",
+      success: false,
+      message: "Login failed",
+      error: error.message,
     });
   }
 };
@@ -257,7 +274,7 @@ const updateUserAddressController = async (req, res) => {
   const { street, city, state, pincode, country, isDefault } = req.body;
 
   const isaddressExist = await userModel.findOne({
-    _id: userId,
+    _id: id,
     "addressess._id": addressId,
   });
 

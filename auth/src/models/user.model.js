@@ -11,7 +11,7 @@ const addressSchema = new mongoose.Schema({
 
 const userSchema = new mongoose.Schema(
   {
-    username: {
+    firebaseId: {
       type: String,
       required: true,
       unique: true,
@@ -26,14 +26,12 @@ const userSchema = new mongoose.Schema(
       select: false,
     },
     fullName: {
-      firstName: {
-        type: String,
-        required: true,
-      },
-      lastName: {
-        type: String,
-        required: true,
-      },
+      type: String,
+      required: true,
+    },
+    profileImage: {
+      type: String,
+      required: true,
     },
     role: {
       type: String,

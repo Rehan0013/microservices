@@ -1,9 +1,6 @@
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 
-// Set some test environment variables
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_jwt_secret';
-
 let mongoServer;
 
 // Increase timeout for slower systems
@@ -27,6 +24,6 @@ beforeEach(async () => {
   for (const key in collections) {
     await collections[key].deleteMany({});
   }
-  // Reset redis mock store - access it through require since it's mocked
+  // Reset redis mock store - access it through require since it's mocked in jest.env.js
   require('./tests/helpers/redisMock')._reset();
 });

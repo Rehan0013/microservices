@@ -11,29 +11,19 @@ const responseWithValidationErrors = (req, res, next) => {
 };
 
 const registerUserValidation = [
-  body("username")
+  body("firebaseId")
+    .notEmpty()
+    .withMessage("FirebaseId must not be empty.")
     .isString()
-    .withMessage("Username must be string")
-    .isLength({ min: 3 })
-    .withMessage("Username must be at least 3 character long"),
+    .withMessage("Firebase ID must be string"),
 
   body("email").isEmail().withMessage("Invalid Email Address"),
 
-  body("password")
-    .isLength({ min: 6 })
-    .withMessage("Password must be at least 6 character long"),
-
-  body("fullName.firstName")
+  body("fullName")
     .notEmpty()
-    .withMessage("First name is required")
+    .withMessage("Full name is required")
     .isString()
-    .withMessage("First name must be string"),
-
-  body("fullName.lastName")
-    .notEmpty()
-    .withMessage("Last name is required")
-    .isString()
-    .withMessage("Last name must be string"),
+    .withMessage("Full name must be string"),
 
   body("role")
     .optional()
@@ -44,11 +34,13 @@ const registerUserValidation = [
 ];
 
 const loginUserValidation = [
-  body("username").optional().notEmpty().withMessage("Username is required"),
+  body("email").notEmpty().withMessage("Email is required"),
 
-  body("email").optional().notEmpty().withMessage("Email is required"),
-
-  body("password").notEmpty().withMessage("Password is required"),
+  body("firebaseId")
+    .notEmpty()
+    .withMessage("FirebaseId must not be empty.")
+    .isString()
+    .withMessage("Firebase ID must be string"),
 
   responseWithValidationErrors,
 ];
